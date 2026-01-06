@@ -1,2 +1,2 @@
-USE_SCRAPERS = False
+USE_SCRAPERS = True
 USE_LLM = False
