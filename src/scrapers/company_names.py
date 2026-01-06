@@ -49,3 +49,4 @@ def get_company_names(limit: int = 100):
 
     except Exception:
         return FALLBACK_COMPANY_NAMES
+
