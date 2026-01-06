@@ -3,11 +3,13 @@ import random
 from datetime import datetime, timedelta
 from uuid import uuid4
 
+from utils.config import USE_SCRAPERS
+from scrapers.company_names import get_company_names
+
 logger = logging.getLogger(__name__)
 
-# YC / Crunchbase–style B2B SaaS company names
-# (scrape-compatible fallback; can be replaced by cached scraper output)
-COMPANY_NAMES = [
+# Fallback YC / Crunchbase–style B2B SaaS company names
+FALLBACK_COMPANY_NAMES = [
     "CloudNova",
     "DataFlux",
     "ScaleOps",
@@ -17,7 +19,7 @@ COMPANY_NAMES = [
     "MetricHive",
     "Launchpad Systems",
     "SignalWorks",
-    "VertexAI Labs"
+    "VertexAI Labs",
 ]
 
 
@@ -36,7 +38,8 @@ def generate_organizations(conn, n_orgs: int = 1):
 
     Seed methodology:
     - UUIDv4 org_id
-    - YC/Crunchbase-style SaaS names
+    - Company names sampled from public tech company corpus
+      (scraped when enabled, fallback otherwise)
     - Enterprise plan
     - Created 3–7 years ago
     - Always active
@@ -44,13 +47,25 @@ def generate_organizations(conn, n_orgs: int = 1):
     cursor = conn.cursor()
     rows = []
 
+    # ----------------------------
+    # Choose company name source
+    # ----------------------------
+    if USE_SCRAPERS:
+        company_names = get_company_names(limit=100)
+        logger.info(
+            f"Using scraped company names ({len(company_names)} available)"
+        )
+    else:
+        company_names = FALLBACK_COMPANY_NAMES
+        logger.info("Using fallback company names")
+
     for _ in range(n_orgs):
         rows.append((
-            str(uuid4()),                 # org_id
-            random.choice(COMPANY_NAMES), # name
-            "enterprise",                 # plan_type
-            random_created_at(),          # created_at
-            1                             # is_active
+            str(uuid4()),                       # org_id
+            random.choice(company_names),       # name
+            "enterprise",                       # plan_type
+            random_created_at(),                # created_at
+            1                                   # is_active
         ))
 
     cursor.executemany(
