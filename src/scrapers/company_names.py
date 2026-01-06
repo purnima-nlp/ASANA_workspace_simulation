@@ -1,4 +1,6 @@
 import requests
+import csv
+import io
 
 FALLBACK_COMPANY_NAMES = [
     "CloudNova",
@@ -19,24 +21,21 @@ RAW_CSV_URL = (
 
 def get_company_names(limit: int = 100):
     """
-    Try to scrape company names from a public GitHub repo.
-    If network fails or parsing fails, return fallback names.
+    Fetch company names from a public tech-company CSV.
+    Falls back to static names if network or parsing fails.
     """
     try:
         resp = requests.get(RAW_CSV_URL, timeout=5)
         resp.raise_for_status()
 
-        lines = resp.text.splitlines()
-        # Skip header if present
-        if lines and "," in lines[0]:
-            lines = lines[1:]
+        csv_file = io.StringIO(resp.text)
+        reader = csv.DictReader(csv_file)
 
         names = []
-        for line in lines:
-            parts = line.strip().split(",")
-            if parts:
-                # First column is typically company name
-                name = parts[0].strip()
+        for row in reader:
+            name = row.get("Company Name")
+            if name:
+                name = name.strip()
                 if name and name not in names:
                     names.append(name)
 
@@ -44,10 +43,9 @@ def get_company_names(limit: int = 100):
                 break
 
         if len(names) < 5:
-            raise ValueError("Too few names scraped")
+            raise ValueError("Too few company names parsed")
 
         return names
 
     except Exception:
-        # Network errors, parsing errors, or too few names
         return FALLBACK_COMPANY_NAMES
