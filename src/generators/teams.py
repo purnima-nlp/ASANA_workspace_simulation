@@ -73,7 +73,7 @@ def generate_teams(conn, org_ids, n_teams: int = 40):
 
     Seed methodology implemented:
     - UUIDv4 team IDs
-    - Functional team names
+    - Functional team names (safe for > template count)
     - Organization-scoped
     - Created after org creation, clustered around re-org events
     - Team size distribution recorded for downstream membership generation
@@ -90,16 +90,21 @@ def generate_teams(conn, org_ids, n_teams: int = 40):
     )
     org_created_at = cursor.fetchone()["created_at"]
 
-    used_names = set()
+    # Track how many times each base name has been used
+    name_counts = {}
 
     for _ in range(n_teams):
         team_id = str(uuid4())
 
-        # Avoid duplicate team names
-        name = random.choice(TEAM_NAME_TEMPLATES)
-        while name in used_names:
-            name = random.choice(TEAM_NAME_TEMPLATES)
-        used_names.add(name)
+        base_name = random.choice(TEAM_NAME_TEMPLATES)
+        count = name_counts.get(base_name, 0)
+
+        if count == 0:
+            name = base_name
+        else:
+            name = f"{base_name} {count + 1}"
+
+        name_counts[base_name] = count + 1
 
         created_at = random_created_at(org_created_at)
 
@@ -132,3 +137,4 @@ def generate_teams(conn, org_ids, n_teams: int = 40):
 
     # Return full team metadata for team_memberships generator
     return teams
+
