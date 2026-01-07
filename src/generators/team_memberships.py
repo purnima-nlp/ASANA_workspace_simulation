@@ -36,10 +36,11 @@ def generate_team_memberships(conn, users, teams):
     user_created_map = {u["user_id"]: u["created_at"] for u in users}
     team_created_map = {t["team_id"]: t["created_at"] for t in teams}
 
-    # Track current membership counts per team
-    team_members = {t["team_id"]: [] for t in teams}
-
     user_ids = list(user_created_map.keys())
+    user_id_set = set(user_ids)
+
+    # Track current membership counts per team (USE SETS)
+    team_members = {t["team_id"]: set() for t in teams}
 
     # First pass: assign users to teams (1–3 teams per user)
     for user_id in user_ids:
@@ -51,7 +52,7 @@ def generate_team_memberships(conn, users, teams):
         selected_teams = random.sample(teams, k=min(n_teams, len(teams)))
 
         for team in selected_teams:
-            team_members[team["team_id"]].append(user_id)
+            team_members[team["team_id"]].add(user_id)
 
     # Second pass: enforce team size targets (soft constraint)
     for team in teams:
@@ -60,20 +61,26 @@ def generate_team_memberships(conn, users, teams):
         members = team_members[team_id]
 
         if len(members) > target_size:
-            team_members[team_id] = random.sample(members, target_size)
+            team_members[team_id] = set(random.sample(list(members), target_size))
 
         elif len(members) < target_size:
             needed = target_size - len(members)
-            additional_users = random.sample(
-                [u for u in user_ids if u not in members],
-                k=min(needed, len(user_ids))
-            )
-            team_members[team_id].extend(additional_users)
+            available_users = list(user_id_set - members)
+
+            if available_users:
+                additional_users = random.sample(
+                    available_users,
+                    k=min(needed, len(available_users))
+                )
+                members.update(additional_users)
 
     # Final pass: create membership rows and assign roles
     for team in teams:
         team_id = team["team_id"]
-        members = team_members[team_id]
+        members = list(team_members[team_id])
+
+        if not members:
+            continue
 
         # Determine number of leads (5–10%)
         n_leads = max(1, int(len(members) * random.uniform(0.05, 0.10)))
@@ -111,3 +118,4 @@ def generate_team_memberships(conn, users, teams):
     logger.info(f"Generated {len(memberships)} team memberships")
 
     return memberships
+
