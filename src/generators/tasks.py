@@ -107,21 +107,11 @@ def generate_tasks(
     tasks = []
 
     org_id = org_ids[0]
-
-    # Map users by team for weighted assignment
-    team_users = {}
-    for team in teams:
-        team_users[team["team_id"]] = [
-            u["user_id"] for u in users
-            if u["user_id"]  # simple, refined later via memberships
-        ]
-
     now = datetime.utcnow()
 
     # -------- First pass: create top-level tasks -------- #
     for project in projects:
         project_type = project.get("project_type", "engineering")
-        team_id = project["team_id"]
 
         for _ in range(n_tasks_per_project):
             task_id = str(uuid4())
@@ -220,6 +210,12 @@ def generate_tasks(
             for t in tasks
         ]
     )
+
+    conn.commit()
+    logger.info(f"Generated {len(tasks)} tasks")
+
+    return tasks
+
 
     conn.commit()
     logger.info(f"Generated {len(tasks)} tasks")
