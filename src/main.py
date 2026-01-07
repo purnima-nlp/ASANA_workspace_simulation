@@ -57,14 +57,24 @@ def main():
         # ---------------------------
         org_ids = generate_organizations(conn)
         users = generate_users(conn, org_ids, n_users=800)
+
+        print(">>> AFTER USERS <<<", flush=True)
+
         teams = generate_teams(conn, org_ids, n_teams=40)
+
+        print(">>> AFTER TEAMS <<<", flush=True)
+
         generate_team_memberships(conn, users, teams)
+
+        print(">>> AFTER TEAM MEMBERSHIPS <<<", flush=True)
 
         # ---------------------------
         # Projects & structure
         # ---------------------------
         projects = generate_projects(conn, teams, projects_per_team=4)
         sections = generate_sections(conn, projects)
+
+        print(">>> AFTER PROJECTS & SECTIONS <<<", flush=True)
 
         # ---------------------------
         # Tasks & placement
@@ -79,10 +89,14 @@ def main():
         )
         generate_task_projects(conn, tasks, projects, sections)
 
+        print(">>> AFTER TASKS <<<", flush=True)
+
         # ---------------------------
         # Discussion
         # ---------------------------
         generate_comments(conn, tasks, users)
+
+        print(">>> AFTER COMMENTS <<<", flush=True)
 
         # ---------------------------
         # Custom fields
@@ -95,11 +109,15 @@ def main():
             conn, tasks, project_custom_fields, custom_fields
         )
 
+        print(">>> AFTER CUSTOM FIELDS <<<", flush=True)
+
         # ---------------------------
         # Tags
         # ---------------------------
         tags = generate_tags(conn, org_ids, n_tags=12)
         generate_task_tags(conn, tasks, tags)
+
+        print(">>> AFTER TAGS <<<", flush=True)
 
         logger.info("Pipeline completed successfully")
 
@@ -114,3 +132,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
