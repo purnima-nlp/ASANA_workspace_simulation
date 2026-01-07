@@ -19,8 +19,9 @@ def generate_task_projects(conn, tasks, projects, sections):
 
     # Build lookup: project_id -> sections
     project_sections = {}
-    for s in sections:
-        project_sections.setdefault(s["project_id"], []).append(s)
+    for section in sections:
+        section_id, project_id, name, position = section
+        project_sections.setdefault(project_id, []).append(section_id)
 
     project_ids = [p["project_id"] for p in projects]
 
@@ -28,7 +29,6 @@ def generate_task_projects(conn, tasks, projects, sections):
         task_id = task["task_id"]
 
         # Decide how many projects this task appears in
-        # 75–85% single project, rest multi-project
         n_projects = 1 if random.random() < 0.80 else random.randint(2, 3)
 
         assigned_projects = random.sample(
@@ -37,9 +37,8 @@ def generate_task_projects(conn, tasks, projects, sections):
         )
 
         for project_id in assigned_projects:
-            # Select a valid section within this project
             valid_sections = project_sections.get(project_id, [])
-            section_id = random.choice(valid_sections)["section_id"] if valid_sections else None
+            section_id = random.choice(valid_sections) if valid_sections else None
 
             task_projects.append((
                 task_id,
