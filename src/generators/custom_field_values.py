@@ -56,11 +56,9 @@ def generate_custom_field_values(
     """
     Generate task-level custom field values.
 
-    Seed methodology implemented:
-    - Only fields enabled on a task's project are populated
-    - Required fields always populated
-    - Optional fields are sparse
-    - Values respect field type
+    Fixes:
+    - Ensures (task_id, field_id) uniqueness
+    - Handles multi-project task membership correctly
     """
     cursor = conn.cursor()
     values = []
@@ -69,27 +67,33 @@ def generate_custom_field_values(
     field_map = {f["field_id"]: f for f in custom_fields}
 
     project_field_map = {}
-    for pcf in project_custom_fields:
-        project_id, field_id, is_required = pcf
+    for project_id, field_id, is_required in project_custom_fields:
         project_field_map.setdefault(project_id, []).append(
             (field_id, bool(is_required))
         )
 
     # Build task -> project mapping
-    cursor.execute(
-        "SELECT task_id, project_id FROM task_projects"
-    )
-    task_project_map = cursor.fetchall()
+    cursor.execute("SELECT task_id, project_id FROM task_projects")
+    task_project_rows = cursor.fetchall()
 
     task_to_projects = {}
-    for row in task_project_map:
+    for row in task_project_rows:
         task_to_projects.setdefault(row["task_id"], set()).add(row["project_id"])
+
+    # Track already-inserted (task_id, field_id)
+    seen_pairs = set()
 
     for task in tasks:
         task_id = task["task_id"]
 
         for project_id in task_to_projects.get(task_id, []):
             for field_id, is_required in project_field_map.get(project_id, []):
+
+                # ✅ Skip duplicates across projects
+                key = (task_id, field_id)
+                if key in seen_pairs:
+                    continue
+
                 field = field_map[field_id]
 
                 enum_val, num_val, text_val, date_val = generate_value(
@@ -110,6 +114,8 @@ def generate_custom_field_values(
                     enum_val
                 ))
 
+                seen_pairs.add(key)
+
     cursor.executemany(
         """
         INSERT INTO custom_field_values (
@@ -124,6 +130,12 @@ def generate_custom_field_values(
         """,
         values
     )
+
+    conn.commit()
+    logger.info(f"Generated {len(values)} custom field values")
+
+    return values
+
 
     conn.commit()
     logger.info(f"Generated {len(values)} custom field values")
