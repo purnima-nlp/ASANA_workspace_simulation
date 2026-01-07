@@ -70,7 +70,7 @@ def generate_users(conn, org_ids, n_users: int = 800):
         full_name = fake.name()
         first, last = full_name.lower().split(" ", 1)
 
-        email = f"{first}.{last}{random.randint(1,9999)}@example.com"
+        email = f"{first}.{last}{random.randint(1, 9999)}@example.com"
 
         role = random.choice(ROLE_DISTRIBUTION)
         created_at = random_created_at(org_created_at)
@@ -106,4 +106,16 @@ def generate_users(conn, org_ids, n_users: int = 800):
     conn.commit()
     logger.info(f"Generated {len(users)} users")
 
-    return [user[0] for user in users]
+    # ✅ FIX: return full user objects for downstream generators
+    return [
+        {
+            "user_id": u[0],
+            "org_id": u[1],
+            "email": u[2],
+            "full_name": u[3],
+            "role": u[4],
+            "created_at": u[5],
+            "is_active": u[6],
+        }
+        for u in users
+    ]
