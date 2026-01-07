@@ -24,6 +24,7 @@ def random_comment_time(task_created_at: str, task_completed_at: str | None) -> 
     """
     Generate a comment timestamp after task creation.
     Comments cluster near completion if task is completed.
+    Safely handles temporal edge cases.
     """
     start = datetime.fromisoformat(task_created_at)
     now = datetime.utcnow()
@@ -34,6 +35,11 @@ def random_comment_time(task_created_at: str, task_completed_at: str | None) -> 
         end = now
 
     delta_seconds = int((end - start).total_seconds())
+
+    # ✅ FIX: guard against negative or zero ranges
+    if delta_seconds <= 0:
+        return start.isoformat()
+
     return (start + timedelta(seconds=random.randint(0, delta_seconds))).isoformat()
 
 
@@ -75,14 +81,14 @@ def generate_comments(
                 user_id = random.choice(user_ids)
 
             comments.append((
-                str(uuid4()),                            # comment_id
-                task_id,                                 # task_id
-                user_id,                                 # user_id
-                random.choice(COMMENT_TEMPLATES),        # body
+                str(uuid4()),                     # comment_id
+                task_id,                          # task_id
+                user_id,                          # user_id
+                random.choice(COMMENT_TEMPLATES), # body
                 random_comment_time(
                     task["created_at"],
                     task["completed_at"]
-                )                                        # created_at
+                )                                 # created_at
             ))
 
     cursor.executemany(
