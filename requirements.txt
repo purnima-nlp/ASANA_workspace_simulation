@@ -1,4 +1,7 @@
-requests
-faker
-python-dotenv
-
+asgiref==3.11.1
+Django==5.2.11
+djangorestframework==3.16.1
+packaging @ file:///C:/miniconda3/conda-bld/packaging_1761049101700/work
+sqlparse==0.5.5
+typing_extensions==4.15.0
+tzdata==2025.3
